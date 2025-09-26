@@ -30,7 +30,7 @@ include 'templates/header.php';
     }
 </style>
 <div class="card-container">
-    <img src="images/spiny.jpg" alt="Logo da Weagles" class="logo-image">
+    <img src="images/logo.jpg" alt="Logo da Weagles" class="logo-image">
     
     <h1>Participe e Concorra!</h1>
     
