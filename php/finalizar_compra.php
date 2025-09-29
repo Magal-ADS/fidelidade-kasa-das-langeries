@@ -56,7 +56,7 @@ try {
 
     if ($dados_cliente) {
         // Bloco de Webhook (sem alterações)
-        $webhook_url_base = 'https://webhook.weagles.com.br/webhook/65a611a7-036b-43de-b712-0fe69ebb9452';
+        $webhook_url_base = 'https://webhook.weagles.com.br/webhook/634b175c-f0dc-423c-add7-24f50aad13f5';
         $dados_para_webhook = [
             'nome_cliente'     => $dados_cliente['nome_completo'],
             'whatsapp'         => $dados_cliente['whatsapp'],
