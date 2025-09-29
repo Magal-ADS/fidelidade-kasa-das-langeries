@@ -1,5 +1,5 @@
 <?php
-// /base_clientes.php (VERSÃO COM BARRA DE PESQUISA)
+// /base_clientes.php (VERSÃO CORRIGIDA)
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -12,7 +12,7 @@ if (!isset($_SESSION['cargo']) || $_SESSION['cargo'] != 1) {
 include 'templates/header.php';
 require_once 'php/db_config.php';
 
-// --- Lógica PHP para buscar os dados (inalterada) ---
+// --- Lógica PHP para buscar os dados (CORRIGIDA) ---
 $configs = [];
 $result_configs = pg_query($link, "SELECT chave, valor FROM configuracoes WHERE chave LIKE 'filtro_%'");
 if ($result_configs) { while($row = pg_fetch_assoc($result_configs)){ $configs[$row['chave']] = $row['valor']; } }
@@ -21,28 +21,37 @@ $gastos_altos_valor = $configs['filtro_gastos_altos_valor'] ?? 1000;
 $gastos_altos_dias = $configs['filtro_gastos_altos_dias'] ?? 90;
 $filtro_ativo = $_GET['filtro'] ?? 'todos';
 $clientes = [];
-$admin_id = $_SESSION['usuario_id'];
+
+// A variável $admin_id não é mais necessária para as consultas.
+// $admin_id = $_SESSION['usuario_id']; 
+
 $sql = '';
 $params = [];
-$query_name = 'admin_filtro_' . $filtro_ativo . '_v2';
+// O nome da query preparada foi alterado para garantir que a nova versão sem filtro seja usada.
+$query_name = 'admin_filtro_' . $filtro_ativo . '_global'; 
+
+// =================== CORREÇÃO APLICADA ABAIXO ===================
+// A cláusula "WHERE ... usuario_id = $1" foi REMOVIDA de todas as queries
+// e os parâmetros e seus placeholders ($1, $2, $3) foram reajustados.
 switch ($filtro_ativo) {
     case 'aniversariantes_dia':
-        $sql = "SELECT nome_completo, whatsapp, data_nascimento, data_cadastro FROM clientes WHERE usuario_id = $1 AND EXTRACT(DAY FROM data_nascimento) = EXTRACT(DAY FROM CURRENT_DATE) AND EXTRACT(MONTH FROM data_nascimento) = EXTRACT(MONTH FROM CURRENT_DATE)";
-        $params = [$admin_id];
+        $sql = "SELECT nome_completo, whatsapp, data_nascimento, data_cadastro FROM clientes WHERE EXTRACT(DAY FROM data_nascimento) = EXTRACT(DAY FROM CURRENT_DATE) AND EXTRACT(MONTH FROM data_nascimento) = EXTRACT(MONTH FROM CURRENT_DATE)";
+        $params = []; // Sem parâmetros
         break;
     case 'inativos':
-        $sql = "SELECT c.nome_completo, c.whatsapp, c.data_nascimento, c.data_cadastro FROM clientes c LEFT JOIN ( SELECT cliente_id, MAX(data_compra) as ultima_compra FROM compras GROUP BY cliente_id ) AS ultimas_compras ON c.id = ultimas_compras.cliente_id WHERE c.usuario_id = $1 AND (ultimas_compras.ultima_compra IS NULL OR ultimas_compras.ultima_compra < (CURRENT_DATE - ($2 || ' months')::interval)) ORDER BY c.nome_completo ASC";
-        $params = [$admin_id, $inativos_meses];
+        $sql = "SELECT c.nome_completo, c.whatsapp, c.data_nascimento, c.data_cadastro FROM clientes c LEFT JOIN ( SELECT cliente_id, MAX(data_compra) as ultima_compra FROM compras GROUP BY cliente_id ) AS ultimas_compras ON c.id = ultimas_compras.cliente_id WHERE (ultimas_compras.ultima_compra IS NULL OR ultimas_compras.ultima_compra < (CURRENT_DATE - ($1 || ' months')::interval)) ORDER BY c.nome_completo ASC";
+        $params = [$inativos_meses]; // Apenas 1 parâmetro agora
         break;
     case 'gastos_altos':
-        $sql = "SELECT c.nome_completo, c.whatsapp, c.data_nascimento, c.data_cadastro, SUM(co.valor) AS total_gasto FROM clientes c JOIN compras co ON c.id = co.cliente_id WHERE c.usuario_id = $1 AND co.data_compra >= (CURRENT_DATE - ($2 || ' days')::interval) GROUP BY c.id HAVING SUM(co.valor) >= $3 ORDER BY total_gasto DESC";
-        $params = [$admin_id, $gastos_altos_dias, $gastos_altos_valor];
+        $sql = "SELECT c.nome_completo, c.whatsapp, c.data_nascimento, c.data_cadastro, SUM(co.valor) AS total_gasto FROM clientes c JOIN compras co ON c.id = co.cliente_id WHERE co.data_compra >= (CURRENT_DATE - ($1 || ' days')::interval) GROUP BY c.id HAVING SUM(co.valor) >= $2 ORDER BY total_gasto DESC";
+        $params = [$gastos_altos_dias, $gastos_altos_valor]; // Apenas 2 parâmetros agora
         break;
     default:
-        $sql = "SELECT nome_completo, whatsapp, data_nascimento, data_cadastro FROM clientes WHERE usuario_id = $1 ORDER BY data_cadastro DESC";
-        $params = [$admin_id];
+        $sql = "SELECT nome_completo, whatsapp, data_nascimento, data_cadastro FROM clientes ORDER BY data_cadastro DESC";
+        $params = []; // Sem parâmetros
         break;
 }
+
 $stmt = pg_prepare($link, $query_name, $sql);
 if ($stmt) {
     $result = pg_execute($link, $query_name, $params);
