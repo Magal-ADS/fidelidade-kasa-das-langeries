@@ -1,5 +1,5 @@
 <?php
-// /gerenciar_filtros.php (VERSÃO CORRIGIDA PARA POSTGRESQL)
+// /gerenciar_filtros.php (VERSÃO FINAL E COMPLETA)
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -11,12 +11,8 @@ if (!isset($_SESSION['cargo']) || $_SESSION['cargo'] != 1) {
 
 require_once 'php/db_config.php';
 
-// =================== INÍCIO DO BLOCO CORRIGIDO ===================
 $configuracoes = [];
-// A consulta SQL com LIKE é compatível com PostgreSQL
 $sql = "SELECT chave, valor, descricao, tipo_input FROM configuracoes WHERE chave LIKE 'filtro_%'";
-
-// A execução da consulta foi trocada para pg_query e pg_fetch_assoc
 $result = pg_query($link, $sql);
 if ($result) {
     while ($row = pg_fetch_assoc($result)) {
@@ -25,8 +21,6 @@ if ($result) {
 }
 
 pg_close($link);
-// ==================== FIM DO BLOCO CORRIGIDO =====================
-
 include 'templates/header.php';
 ?>
 
@@ -61,21 +55,27 @@ include 'templates/header.php';
 
     <form id="form-filtros" action="php/salvar_configuracoes.php" method="POST" class="settings-form">
         <div class="form-group">
-            <label for="filtro_inativos_meses"><?php echo htmlspecialchars($configuracoes['filtro_inativos_meses']['descricao']); ?></label>
-            <input type="number" name="filtro_inativos_meses" id="filtro_inativos_meses" value="<?php echo htmlspecialchars($configuracoes['filtro_inativos_meses']['valor']); ?>" required>
+            <label for="filtro_inativos_meses">
+                <?php echo htmlspecialchars($configuracoes['filtro_inativos_meses']['descricao'] ?? 'Tempo para cliente ser inativo (meses)'); ?>
+            </label>
+            <input type="number" name="filtro_inativos_meses" id="filtro_inativos_meses" value="<?php echo htmlspecialchars($configuracoes['filtro_inativos_meses']['valor'] ?? 6); ?>" required>
         </div>
         <div class="form-group">
-            <label for="filtro_gastos_altos_valor"><?php echo htmlspecialchars($configuracoes['filtro_gastos_altos_valor']['descricao']); ?></label>
-            <input type="number" step="0.01" name="filtro_gastos_altos_valor" id="filtro_gastos_altos_valor" value="<?php echo htmlspecialchars($configuracoes['filtro_gastos_altos_valor']['valor']); ?>" required>
+            <label for="filtro_gastos_altos_valor">
+                <?php echo htmlspecialchars($configuracoes['filtro_gastos_altos_valor']['descricao'] ?? 'Valor para considerar gasto alto (R$)'); ?>
+            </label>
+            <input type="number" step="0.01" name="filtro_gastos_altos_valor" id="filtro_gastos_altos_valor" value="<?php echo htmlspecialchars($configuracoes['filtro_gastos_altos_valor']['valor'] ?? 1000); ?>" required>
         </div>
         <div class="form-group">
-            <label for="filtro_gastos_altos_dias"><?php echo htmlspecialchars($configuracoes['filtro_gastos_altos_dias']['descricao']); ?></label>
-            <input type="number" name="filtro_gastos_altos_dias" id="filtro_gastos_altos_dias" value="<?php echo htmlspecialchars($configuracoes['filtro_gastos_altos_dias']['valor']); ?>" required>
+            <label for="filtro_gastos_altos_dias">
+                <?php echo htmlspecialchars($configuracoes['filtro_gastos_altos_dias']['descricao'] ?? 'Período para analisar gastos altos (dias)'); ?>
+            </label>
+            <input type="number" name="filtro_gastos_altos_dias" id="filtro_gastos_altos_dias" value="<?php echo htmlspecialchars($configuracoes['filtro_gastos_altos_dias']['valor'] ?? 90); ?>" required>
         </div>
         <button type="submit" class="btn btn-verde" id="btn-salvar-filtros">Salvar Alterações</button>
         <p id="form-success-message" class="success-message"></p>
     </form>
-</div>
+    </div>
 
 <script>
 // O JavaScript não precisa de alteração
