@@ -1,5 +1,5 @@
 <?php
-// /gerenciar_sorteio.php (VERSÃO CORRIGIDA PARA POSTGRESQL)
+// /gerenciar_sorteio.php (VERSÃO FINAL E CORRIGIDA)
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -12,18 +12,26 @@ if (!isset($_SESSION['cargo']) || $_SESSION['cargo'] != 1) {
 require_once 'php/db_config.php';
 
 // =================== INÍCIO DO BLOCO CORRIGIDO ===================
-// 1. BUSCA A CONFIGURAÇÃO DO SORTEIO (Convertido para PG)
+// 1. BUSCA A CONFIGURAÇÃO DO SORTEIO (COM VERIFICAÇÃO)
 $sql_config = "SELECT * FROM configuracoes WHERE chave = 'sorteio_valor_base_extra'";
 $result_config = pg_query($link, $sql_config);
 $config_sorteio = pg_fetch_assoc($result_config);
 
-// 2. BUSCA O TOTAL DE CUPONS (Convertido para PG)
+// CORREÇÃO 1: Se a configuração não for encontrada, pg_fetch_assoc retorna 'false'.
+// Convertemos para um array vazio para evitar erros no HTML.
+if ($config_sorteio === false) {
+    $config_sorteio = [];
+}
+
+// 2. BUSCA O TOTAL DE CUPONS (SEM FILTRO DE ADMIN)
 $total_cupons = 0;
-$admin_id = $_SESSION['usuario_id'];
-$sql_cupons = "SELECT COUNT(*) as total FROM sorteio WHERE usuario_id = $1";
+// CORREÇÃO 2: A cláusula "WHERE usuario_id = $1" foi REMOVIDA para contar
+// todos os cupons, seguindo a regra de que o administrador vê tudo.
+$sql_cupons = "SELECT COUNT(*) as total FROM sorteio"; 
 $stmt_cupons = pg_prepare($link, "contar_cupons_geral_query", $sql_cupons);
 if ($stmt_cupons) {
-    $result_cupons = pg_execute($link, "contar_cupons_geral_query", [$admin_id]);
+    // A execução agora usa um array vazio, pois não há parâmetros.
+    $result_cupons = pg_execute($link, "contar_cupons_geral_query", []);
     if ($result_cupons) {
         $total_cupons = pg_fetch_assoc($result_cupons)['total'];
     }
@@ -37,7 +45,7 @@ include 'templates/header.php';
 <title>Gerenciar Sorteio</title>
 
 <style>
-    /* Estilos para o tema escuro */
+    /* Estilos (sem alterações) */
     .page-header h1 { color: var(--cor-dourado) !important; }
     .page-header p { color: var(--cor-branco) !important; opacity: 0.8; }
     .settings-form { background-color: rgba(44, 44, 44, 0.5) !important; backdrop-filter: blur(10px) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }
@@ -63,8 +71,8 @@ include 'templates/header.php';
     <form id="form-regra-sorteio" action="php/salvar_configuracoes.php" method="POST" class="settings-form">
         <h2>Regra de Geração de Números</h2>
         <div class="form-group">
-            <label for="sorteio_valor_base_extra"><?php echo htmlspecialchars($config_sorteio['descricao']); ?></label>
-            <input type="number" step="0.01" name="sorteio_valor_base_extra" id="sorteio_valor_base_extra" value="<?php echo htmlspecialchars($config_sorteio['valor']); ?>" required>
+            <label for="sorteio_valor_base_extra"><?php echo htmlspecialchars($config_sorteio['descricao'] ?? 'Valor em compras para gerar 1 número da sorte extra'); ?></label>
+            <input type="number" step="0.01" name="sorteio_valor_base_extra" id="sorteio_valor_base_extra" value="<?php echo htmlspecialchars($config_sorteio['valor'] ?? 50.00); ?>" required>
         </div>
         <button type="submit" class="btn btn-verde">Salvar Regra</button>
         <p id="form-success-message" class="success-message"></p>
@@ -94,9 +102,8 @@ include 'templates/header.php';
     </div>
 </div>
 
-
 <script>
-// O JavaScript não precisa de alteração
+// JavaScript (sem alterações)
 document.addEventListener('DOMContentLoaded', function() {
     const formRegra = document.getElementById('form-regra-sorteio');
     const successMessage = document.getElementById('form-success-message');
