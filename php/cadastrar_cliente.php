@@ -44,7 +44,7 @@ if ($stmt) {
         $_SESSION['cliente_id'] = $row['id'];
         $_SESSION['cliente_nome'] = $nome;
         unset($_SESSION['cpf_digitado']);
-        $response = ['status' => 'success', 'message' => 'Cliente cadastrado com sucesso!', 'redirect' => 'dados_compra.php'];
+        $response = ['status' => 'success', 'message' => 'Cliente cadastrado com sucesso!', 'redirect' => 'confirmacao_cliente.php'];
     
     } else {
         // =================== BLOCO DE ERRO CORRIGIDO ===================
